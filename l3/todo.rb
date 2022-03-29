@@ -30,11 +30,15 @@ class Todo
 
   def to_displayable_string
     # FILL YOUR CODE HERE
-    if due_today?
-      "#{@text}"
-    else
-      "#{@text} #{@due_date}"
+    box = "[ ]"
+    if complete?
+      box = "[x]"
     end
+    date_text = "#{@due_date}"
+    if due_today?
+      date_text = ""
+    end
+    "#{box} #{@text} #{date_text}"
   end
 end
 
@@ -68,11 +72,7 @@ class TodosList
   def to_displayable_list
     # FILL YOUR CODE HERE
     result = @todos.map do |todo|
-      if todo.complete?
-        "[x] #{todo.to_displayable_string}"
-      else
-        "[ ]  #{todo.to_displayable_string}"
-      end
+      todo.to_displayable_string
     end
     result.join("\n")
   end

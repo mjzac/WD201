@@ -25,46 +25,29 @@ dns_raw = File.readlines("zone")
 # ..
 
 def parse_dns(dns_raw)
-  dns_records = []
-  dns_raw = dns_raw.select { |line| line[0] != "#" && line.strip.length != 0 }
-  dns_raw.each do |record|
-    cols = record.split(",").map { |col| col.strip }
-    dns_entry_type = cols.first.to_sym
-    domain = cols[1]
-    entry = {}
-    if dns_entry_type == :A
-      ip = cols.last
-      entry = {
-        :type => dns_entry_type,
-        :domain => domain,
-        :ip => ip,
-      }
-    elsif dns_entry_type == :CNAME
-      entry = {
-        :type => dns_entry_type,
-        :domain => domain,
-        :alias => cols.last,
-      }
-    end
-    dns_records.push(entry)
+  dns_raw.
+    reject { |line| line.strip.empty? }.
+    map { |line| line.strip.split(", ") }.
+    reject { |line| line.first != "A" && line.first != "CNAME" }.
+    each_with_object({}) do |record, records|
+    records[record[1]] = {
+      :type => record[0],
+      :target => record[2],
+    }
   end
-  dns_records
 end
 
 def resolve(dns_records, lookup_chain, domain)
-  entries = dns_records.select { |record|
-    record[:domain] == domain
-  }
-  if entries.length == 0
-    lookup_chain.push("Error: record not found for #{domain}")
-    return lookup_chain
-  end
-  first_record = entries.first
-  if first_record[:type] == :A
-    lookup_chain.push(first_record[:ip])
-  elsif first_record[:type] == :CNAME
-    lookup_chain.push(first_record[:domain])
-    resolve(dns_records, lookup_chain, first_record[:alias])
+  record = dns_records[domain]
+  if (!record)
+    lookup_chain << "Error: Record not found for " + domain
+  elsif record[:type] == "CNAME"
+    lookup_chain.push(record[:target])
+    resolve(dns_records, lookup_chain, record[:target])
+  elsif record[:type] == "A"
+    lookup_chain.push(record[:target])
+  else
+    lookup_chain << "Invalid record type for " + domain
   end
 end
 
